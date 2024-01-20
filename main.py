@@ -94,29 +94,36 @@ def get_family_count(message):
 
 
 def save_family_count(message):
-    try:
-        family_count = int(message.text)
-        user_info[message.chat.id]['family_count'] = family_count
-    except ValueError:
+    if message.text.isdigit():
+        user_info[message.chat.id]['family_count'] = int(message.text)
+        print(user_info[message.chat.id])
+        get_family_invalid_info(message)
+    else:
         bot.send_message(message.chat.id, m.get_family_count_error)
         get_family_count(message)
-    get_family_invalid_info(message)
 
 
 @bot.callback_query_handler(
     func=lambda call: 'family_agge2_info_button_pressed' in call.data)
 def family_agge2_info_button_pressed(call):
+    user_info[call.message.chat.id]['family1_work_info'] = []
     _, info = call.data.split(':')
     children_count = int(info)
     info_title = b.family_agge2_info[children_count]
     user_info[call.message.chat.id]['family_agge2_info'] = info_title
-    for _ in range(children_count):
+    if children_count:
+        user_info[call.message.chat.id]['current_child_no_18_23'] = 1
+        user_info[call.message.chat.id]['children_18_23_count'] = children_count
         get_family1_work_info(call.message)
-    get_family_count(call.message)
+    else:
+        get_family_count(call.message)
 
 
 @bot.message_handler(commands=['start'])
 def get_family_agge2_info(message):
+    if user_info[message.chat.id]:
+        bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
+        return
     """узнает сколько детей старше 18 и моложе 23"""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     for idx, info in enumerate(b.family_agge2_info):
@@ -214,32 +221,39 @@ def get_family_work_info(message):
                 callback_data=' get_family_work_info_button_pressed:{}'.format(idx),
             )
         )
-    bot.send_message(message.chat.id, m. get_family_work_info, reply_markup=keyboard)
+    bot.send_message(message.chat.id, m.get_family_work_info, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(
-    func=lambda call: ' get_family1_work_info_button_pressed' in call.data)
+    func=lambda call: 'get_family1_work_info_button_pressed' in call.data)
 def get_family1_work_info_button_pressed(call):
     _, info = call.data.split(':')
-    info_title = b.get_family1_work_info[int(info)]
+    info_title = b.get_family1_work_info[int(info)][0]
     if user_info[call.message.chat.id].get('family1_work_info'):
-        user_info[call.message.chat.id]['get_family1_work_info'].append(info_title)
+        user_info[call.message.chat.id]['family1_work_info'].append(info_title)
     else:
-        user_info[call.message.chat.id]['get_family1_work_info'] = [info_title]
-    # get_cash_info(call.message)
+        user_info[call.message.chat.id]['family1_work_info'] = [info_title]
+    user_info[call.message.chat.id]['children_18_23_count'] -= 1
+    if user_info[call.message.chat.id]['children_18_23_count'] > 0:
+        user_info[call.message.chat.id]['current_child_no_18_23'] += 1
+        get_family1_work_info(call.message)
+    else:
+        get_family_count(call.message)
 
 
 def get_family1_work_info(message):
     """есть работа у детей"""
+    child_no = user_info[message.chat.id]['current_child_no_18_23']
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b. get_family1_work_info):
+    for idx, (info, _) in enumerate(b. get_family1_work_info):
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
                 callback_data=' get_family1_work_info_button_pressed:{}'.format(idx),
             )
         )
-    bot.send_message(message.chat.id, m. get_family1_work_info, reply_markup=keyboard)
+    family1_work_info = {'{}. {}'.format(child_no, m.get_family1_work_info)}
+    bot.send_message(message.chat.id, family1_work_info, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(
