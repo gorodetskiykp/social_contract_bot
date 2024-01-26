@@ -279,7 +279,6 @@ def get_cash_info(message):
     bot.send_message(message.chat.id, m. get_cash_info, reply_markup=keyboard)
 
 
-# @bot.message_handler(commands=['start'])
 def get_summ_cash(message):
     bot.send_message(message.chat.id, m.get_summ_cash)
     bot.register_next_step_handler(message, save_summ_cash)
@@ -295,7 +294,19 @@ def save_summ_cash(message):
     get_possession_info(message)  # есть ли имущество
 
 
+@bot.message_handler(commands=['start'])
 def result(message):
+    user_info[message.chat.id] = {
+        'summ_cash': 10_000,
+        'min_money': 20_000,
+        'get_user_work_info': 1,
+        'get_family_work_info': 1,
+        'family1_work_info': [1, 1, 1],
+        'get_family_invalid_info': 'нет ни у кого',
+        'get_user_ps_info': 'нет, не стою на учете',
+        'possession_info': [0, 2, 4],
+        'why_money': 1,
+    }
     # Состав данных user_info[message.chat.id]
     # - min_money - прожиточный минимум в регионе
     #
@@ -304,10 +315,33 @@ def result(message):
     # - family1_work_info - есть ли работа у детей 18-23 = [1, 0, ...]
     # - summ_cash - доход семьи, включая дополнительный
 
-    # 1: суммарный доход семьи меньше прожиточного минимуму
-    case1 = user_info[message.chat.id][summ_cash] < user_info[message.chat.id][min_money]
-    # 2: нет инвалидности
-    bot.send_message(message.chat.id, str(user_info[message.chat.id]))
+    # 1: суммарный доход семьи меньше прожиточного минимума
+    case1 = user_info[message.chat.id]['summ_cash'] < user_info[message.chat.id]['min_money']
+    # 2: все члены семьи, старше 18, имеют доход
+    case2 = all([
+        user_info[message.chat.id]['get_user_work_info'],
+        user_info[message.chat.id]['get_family_work_info'],
+        all(user_info[message.chat.id]['family1_work_info']),
+    ])
+    # 3: ни у кого нет инвалидности
+    case3 = user_info[message.chat.id]['get_family_invalid_info'] == 'нет ни у кого'
+    # 4: у заявителя нет психических проблем
+    case4 = user_info[message.chat.id]['get_user_ps_info'] == 'нет, не стою на учете'
+    # 5: проверка имущества
+    possessions = [b.possession_info[choice][1] for choice in user_info[message.chat.id]['possession_info']]
+    case5 = not any(possessions)
+    # 6: для чего нужны средства
+    case6 = b.why_money[user_info[message.chat.id]['why_money']][1] == 0
+    case = all([
+        case1,
+        case2,
+        case3,
+        case4,
+        case5,
+        case6,
+    ])
+    answer = 'Вы проходите' if case else 'Вы не проходите'
+    bot.send_message(message.chat.id, answer)
 
 
 @bot.callback_query_handler(
@@ -322,7 +356,7 @@ def why_money_button_pressed(call):
 def why_money(message):
     """На что вам необходимы средства."""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b.why_money):
+    for idx, (info, info_idx) in enumerate(b.why_money):
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
@@ -357,7 +391,7 @@ def get_possession_info(message):
     possession_info = user_info[message.chat.id].get('possession_info')
     if not possession_info:
         possession_info = []
-    for idx, text in enumerate(b.possession_info):
+    for idx, (text, p_idx) in enumerate(b.possession_info):
         if idx in possession_info:
             checkbox = '☑'
         else:
@@ -399,7 +433,7 @@ def get_user_name(message):
     get_age(message)
 
 
-@bot.message_handler(commands=['start'])
+# @bot.message_handler(commands=['start'])
 def start_message(message):
     if user_info[message.chat.id]:
         bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
