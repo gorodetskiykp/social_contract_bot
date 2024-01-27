@@ -9,7 +9,7 @@ from telebot import types
 import buttons as b
 import messages as m
 
-from config import TOKEN
+from config import TOKEN, result_address_list
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -50,16 +50,17 @@ def get_location(message):
 @bot.callback_query_handler(
     func=lambda call: 'family_info_button_pressed' in call.data)
 def family_info_button_pressed(call):
-    _, info = call.data.split(':')
-    info_title = b.family_info[int(info)]
+    _, info_idx = call.data.split(':')
+    info_title, info_number = b.family_info[int(info_idx)]
     user_info[call.message.chat.id]['family_info'] = info_title
+    user_info[call.message.chat.id]['family_info_number'] = info_number
     get_family_agge_info(call.message)
 
 
 def get_family_info(message):
     """Опрашивает состав семьи."""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b.family_info):
+    for idx, (info, _) in enumerate(b.family_info):
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
@@ -196,7 +197,7 @@ def get_user_work_info(message):
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
-                callback_data=' get_user_work_info_button_pressed:{}'.format(idx),
+                callback_data='get_user_work_info_button_pressed:{}'.format(idx),
             )
         )
     bot.send_message(message.chat.id, m. get_user_work_info, reply_markup=keyboard)
@@ -208,17 +209,19 @@ def get_family_work_info_button_pressed(call):
     _, info = call.data.split(':')
     _, answer = b. get_family_work_info[int(info)]
     user_info[call.message.chat.id]['get_family_work_info'] = answer
-    # get_family1_work_info(call.message)
+    get_summ_cash(call.message)
 
 
 def get_family_work_info(message):
     """есть работа у супруга или нет"""
+    if user_info[message.chat.id]['family_info_number'] == 0:
+        get_summ_cash(call.message)
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, (info, _) in enumerate(b. get_family_work_info):
+    for idx, (info, _) in enumerate(b.get_family_work_info):
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
-                callback_data=' get_family_work_info_button_pressed:{}'.format(idx),
+                callback_data='get_family_work_info_button_pressed:{}'.format(idx),
             )
         )
     bot.send_message(message.chat.id, m.get_family_work_info, reply_markup=keyboard)
@@ -256,29 +259,6 @@ def get_family1_work_info(message):
     bot.send_message(message.chat.id, family1_work_info, reply_markup=keyboard)
 
 
-@bot.callback_query_handler(
-    func=lambda call: ' get_cash_info_button_pressed' in call.data)
-def get_cash_info_button_pressed(call):
-    _, info = call.data.split(':')
-    info_title = b. get_cash_info[int(info)]
-    user_info[call.message.chat.id]['get_cash_info'] = info_title
-   # bot.send_message(call.message.chat.id, str(user_info))
-    get_summ_cash(call.message)
-
-
-def get_cash_info(message):
-    """есть ли дополнительный доход"""
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b. get_cash_info):
-        keyboard.add(
-            types.InlineKeyboardButton(
-                text=info,
-                callback_data=' get_cash_info_button_pressed:{}'.format(idx),
-            )
-        )
-    bot.send_message(message.chat.id, m. get_cash_info, reply_markup=keyboard)
-
-
 def get_summ_cash(message):
     bot.send_message(message.chat.id, m.get_summ_cash)
     bot.register_next_step_handler(message, save_summ_cash)
@@ -294,11 +274,32 @@ def save_summ_cash(message):
     get_possession_info(message)  # есть ли имущество
 
 
+def report(info):
+    with open('report.txt', encoding='utf8') as f:
+        template = f.read()
+    doc = template.format(
+        name=info['name'],
+        age=info['age'],
+        region_min_money=info['min_money'],
+        region=info['region'],
+        family_info=info['family_info'],
+        children_0_18=info['family_agge_info'],
+        children_18_23=info['family_agge2_info'],
+    )
+    return doc
+
 @bot.message_handler(commands=['start'])
 def result(message):
     user_info[message.chat.id] = {
-        'summ_cash': 10_000,
+        'name': 'Иванов Иван',
+        'age': 40,
+        'region': 'Курганская область',
         'min_money': 20_000,
+        'family_info': 'Замужем / женат',
+        'family_agge_info': 'двое детей',
+        'family_agge2_info': 'трое детей',
+        'summ_cash': 100_000,
+        'family_count': 6,
         'get_user_work_info': 1,
         'get_family_work_info': 1,
         'family1_work_info': [1, 1, 1],
@@ -316,7 +317,9 @@ def result(message):
     # - summ_cash - доход семьи, включая дополнительный
 
     # 1: суммарный доход семьи меньше прожиточного минимума
-    case1 = user_info[message.chat.id]['summ_cash'] < user_info[message.chat.id]['min_money']
+    case1 = ((user_info[message.chat.id]['summ_cash']
+              / user_info[message.chat.id]['family_count'])
+             < user_info[message.chat.id]['min_money'])
     # 2: все члены семьи, старше 18, имеют доход
     case2 = all([
         user_info[message.chat.id]['get_user_work_info'],
@@ -342,6 +345,15 @@ def result(message):
     ])
     answer = 'Вы проходите' if case else 'Вы не проходите'
     bot.send_message(message.chat.id, answer)
+
+    text = 'Результаты анкеты {} @{}\n\n{}\n\n{}'.format(
+        user_info[message.chat.id]['name'],
+        message.chat.username,
+        answer,
+        report(user_info[message.chat.id]),
+    )
+    for address in result_address_list:
+        bot.send_message(address, text)
 
 
 @bot.callback_query_handler(
@@ -412,7 +424,7 @@ def get_possession_info(message):
 
 
 def get_age(message):
-    bot.send_message(message.chat.id, m.age)
+    bot.send_message(message.chat.id, m.get_age)
     bot.register_next_step_handler(message, save_age)
 
 
@@ -428,19 +440,29 @@ def save_age(message):
     get_location(message)
 
 
-def get_user_name(message):
+def get_name(message):
+    bot.send_message(message.chat.id, m.get_name)
+    bot.register_next_step_handler(message, save_name)
+
+
+def save_name(message):
     user_info[message.chat.id]['name'] = message.text.title()
     get_age(message)
 
 
 # @bot.message_handler(commands=['start'])
 def start_message(message):
-    if user_info[message.chat.id]:
+    if user_info[message.chat.id] and 'why_money' in user_info[call.message.chat.id]:
         bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
-        return
+        result(message)
     client = message.chat.first_name
     bot.send_message(message.chat.id, m.start.format(client))
-    bot.register_next_step_handler(message, get_user_name)
+    get_name(message)
+
+
+@bot.message_handler(commands=['id'])
+def get_chat_id(message):
+    bot.send_message(message.chat.id, message.chat.id)
 
 
 bot.infinity_polling()
