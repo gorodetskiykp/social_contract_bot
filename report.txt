@@ -1,0 +1,7 @@
+ФИО: {name}
+Возраст: {age}
+Регион: {region}
+Прожиточный минимум: {region_min_money}
+Семейный статус: {family_info}
+Дети до 18: {children_0_18}
+Дети от 18 до 23: {children_18_23}

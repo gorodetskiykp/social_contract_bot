@@ -1,0 +1,49 @@
+start_message
+
+get_name -> 'name'
+save_name -> 'name'
+
+get_age
+save_age -> 'age'
+
+get_location
+region_button_pressed -> 'region', 'min_money'
+
+Опрашивает состав семьи
+get_family_info
+family_info_button_pressed -> 'family_info', 'family_info_number'
+
+get_family_agge_info
+family_agge_info_button_pressed -> 'family_agge_info'
+
+get_family_agge2_info
+family_agge2_info_button_pressed -> 'family1_work_info', 'family_agge2_info', 'current_child_no_18_23', 'children_18_23_count'
+
+get_family1_work_info
+get_family1_work_info_button_pressed -> 'family1_work_info', 'current_child_no_18_23', 'children_18_23_count'
+
+get_family_count
+save_family_count -> 'family_count'
+
+get_family_invalid_info
+get_family_invalid_info_button_pressed -> 'get_family_invalid_info'
+
+get_user_ps_info
+get_user_ps_invalid_info_button_pressed -> 'get_user_ps_info'
+
+get_user_work_info
+get_user_work_info_button_pressed -> 'get_user_work_info'
+
+get_family_work_info
+get_family_work_info_button_pressed -> 'get_family_work_info'
+
+get_summ_cash
+save_summ_cash -> 'summ_cash'
+
+get_possession_info -> 'possession_info'
+possession_info_button_pressed -> 'possession_info'
+
+why_money
+why_money_button_pressed -> 'why_money'
+
+result
