@@ -93,7 +93,6 @@ def get_family_agge_info(message):
 
 
 def get_family_count(message):
-    print(user_info[message.chat.id])
     bot.send_message(message.chat.id, m.get_family_count)
     bot.register_next_step_handler(message, save_family_count)
 
@@ -182,7 +181,7 @@ def get_user_ps_info(message):
 
 
 @bot.callback_query_handler(
-    func=lambda call: ' get_user_work_info_button_pressed' in call.data)
+    func=lambda call: 'get_user_work_info_button_pressed' in call.data)
 def get_user_work_info_button_pressed(call):
     _, info = call.data.split(':')
     _, answer = b.get_user_work_info[int(info)]
@@ -200,7 +199,7 @@ def get_user_work_info(message):
                 callback_data='get_user_work_info_button_pressed:{}'.format(idx),
             )
         )
-    bot.send_message(message.chat.id, m. get_user_work_info, reply_markup=keyboard)
+    bot.send_message(message.chat.id, m.get_user_work_info, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(
@@ -215,7 +214,7 @@ def get_family_work_info_button_pressed(call):
 def get_family_work_info(message):
     """есть работа у супруга или нет"""
     if user_info[message.chat.id]['family_info_number'] == 0:
-        get_summ_cash(call.message)
+        get_summ_cash(message)
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     for idx, (info, _) in enumerate(b.get_family_work_info):
         keyboard.add(
@@ -288,26 +287,27 @@ def report(info):
     )
     return doc
 
-@bot.message_handler(commands=['start'])
+
+# @bot.message_handler(commands=['start'])
 def result(message):
-    user_info[message.chat.id] = {
-        'name': 'Иванов Иван',
-        'age': 40,
-        'region': 'Курганская область',
-        'min_money': 20_000,
-        'family_info': 'Замужем / женат',
-        'family_agge_info': 'двое детей',
-        'family_agge2_info': 'трое детей',
-        'summ_cash': 100_000,
-        'family_count': 6,
-        'get_user_work_info': 1,
-        'get_family_work_info': 1,
-        'family1_work_info': [1, 1, 1],
-        'get_family_invalid_info': 'нет ни у кого',
-        'get_user_ps_info': 'нет, не стою на учете',
-        'possession_info': [0, 2, 4],
-        'why_money': 1,
-    }
+    # user_info[message.chat.id] = {
+    #     'name': 'Иванов Иван',
+    #     'age': 40,
+    #     'region': 'Курганская область',
+    #     'min_money': 20_000,
+    #     'family_info': 'Замужем / женат',
+    #     'family_agge_info': 'двое детей',
+    #     'family_agge2_info': 'трое детей',
+    #     'summ_cash': 100_000,
+    #     'family_count': 6,
+    #     'get_user_work_info': 1,
+    #     'get_family_work_info': 1,
+    #     'family1_work_info': [1, 1, 1],
+    #     'get_family_invalid_info': 'нет ни у кого',
+    #     'get_user_ps_info': 'нет, не стою на учете',
+    #     'possession_info': [0, 2, 4],
+    #     'why_money': 1,
+    # }
     # Состав данных user_info[message.chat.id]
     # - min_money - прожиточный минимум в регионе
     #
@@ -320,21 +320,27 @@ def result(message):
     case1 = ((user_info[message.chat.id]['summ_cash']
               / user_info[message.chat.id]['family_count'])
              < user_info[message.chat.id]['min_money'])
+    print(f'{case1=}')
     # 2: все члены семьи, старше 18, имеют доход
     case2 = all([
         user_info[message.chat.id]['get_user_work_info'],
         user_info[message.chat.id]['get_family_work_info'],
         all(user_info[message.chat.id]['family1_work_info']),
     ])
+    print(f'{case2=}')
     # 3: ни у кого нет инвалидности
     case3 = user_info[message.chat.id]['get_family_invalid_info'] == 'нет ни у кого'
+    print(f'{case3=}')
     # 4: у заявителя нет психических проблем
     case4 = user_info[message.chat.id]['get_user_ps_info'] == 'нет, не стою на учете'
+    print(f'{case4=}')
     # 5: проверка имущества
     possessions = [b.possession_info[choice][1] for choice in user_info[message.chat.id]['possession_info']]
     case5 = not any(possessions)
+    print(f'{case5=}')
     # 6: для чего нужны средства
-    case6 = b.why_money[user_info[message.chat.id]['why_money']][1] == 0
+    case6 = user_info[message.chat.id]['why_money'][1] == 0
+    print(f'{case6=}')
     case = all([
         case1,
         case2,
@@ -450,7 +456,7 @@ def save_name(message):
     get_age(message)
 
 
-# @bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'])
 def start_message(message):
     if user_info[message.chat.id] and 'why_money' in user_info[call.message.chat.id]:
         bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
