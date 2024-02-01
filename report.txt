@@ -5,3 +5,13 @@
 Семейный статус: {family_info}
 Дети до 18: {children_0_18}
 Дети от 18 до 23: {children_18_23}
+Количество членов семьи: {summ_family}
+Наличие инвалидности: {disabled_person}
+Состоит ли на учете у психиатра: {psycho}
+Официальный доход: {official_income}
+Официальный доход супруга/ги: {spouses_official_income}
+Доход детей от 18 до 23:
+{children_18_23_income}
+Суммарный доход: {summ_cash_family}
+Есть ли иммущество: {property}
+На что необходимы средства: {for_what}

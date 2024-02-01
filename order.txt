@@ -32,10 +32,10 @@ get_user_ps_info
 get_user_ps_invalid_info_button_pressed -> 'get_user_ps_info'
 
 get_user_work_info
-get_user_work_info_button_pressed -> 'get_user_work_info'
+get_user_work_info_button_pressed -> 'get_user_work_info', 'get_user_work_info_title'
 
 get_family_work_info
-get_family_work_info_button_pressed -> 'get_family_work_info'
+get_family_work_info_button_pressed -> 'get_family_work_info', 'get_family_work_info_title'
 
 get_summ_cash
 save_summ_cash -> 'summ_cash'

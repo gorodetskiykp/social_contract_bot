@@ -110,6 +110,7 @@ def save_family_count(message):
     func=lambda call: 'family_agge2_info_button_pressed' in call.data)
 def family_agge2_info_button_pressed(call):
     user_info[call.message.chat.id]['family1_work_info'] = []
+    user_info[call.message.chat.id]['family1_work_info_titles'] = []
     _, info = call.data.split(':')
     children_count = int(info)
     info_title = b.family_agge2_info[children_count]
@@ -184,8 +185,9 @@ def get_user_ps_info(message):
     func=lambda call: 'get_user_work_info_button_pressed' in call.data)
 def get_user_work_info_button_pressed(call):
     _, info = call.data.split(':')
-    _, answer = b.get_user_work_info[int(info)]
+    title, answer = b.get_user_work_info[int(info)]
     user_info[call.message.chat.id]['get_user_work_info'] = answer
+    user_info[call.message.chat.id]['get_user_work_info_title'] = title
     get_family_work_info(call.message)
 
 
@@ -206,8 +208,9 @@ def get_user_work_info(message):
     func=lambda call: 'get_family_work_info_button_pressed' in call.data)
 def get_family_work_info_button_pressed(call):
     _, info = call.data.split(':')
-    _, answer = b. get_family_work_info[int(info)]
+    title, answer = b. get_family_work_info[int(info)]
     user_info[call.message.chat.id]['get_family_work_info'] = answer
+    user_info[call.message.chat.id]['get_family_work_info_title'] = title
     get_summ_cash(call.message)
 
 
@@ -230,11 +233,13 @@ def get_family_work_info(message):
     func=lambda call: 'get_family1_work_info_button_pressed' in call.data)
 def get_family1_work_info_button_pressed(call):
     _, info = call.data.split(':')
-    info_title = b.get_family1_work_info[int(info)][1]
+    info_title, info = b.get_family1_work_info[int(info)]
     if user_info[call.message.chat.id].get('family1_work_info'):
-        user_info[call.message.chat.id]['family1_work_info'].append(info_title)
+        user_info[call.message.chat.id]['family1_work_info'].append(info)
+        user_info[call.message.chat.id]['family1_work_info_titles'].append(info_title)
     else:
-        user_info[call.message.chat.id]['family1_work_info'] = [info_title]
+        user_info[call.message.chat.id]['family1_work_info'] = [info]
+        user_info[call.message.chat.id]['family1_work_info_titles'] = [info_title]
     user_info[call.message.chat.id]['children_18_23_count'] -= 1
     if user_info[call.message.chat.id]['children_18_23_count'] > 0:
         user_info[call.message.chat.id]['current_child_no_18_23'] += 1
@@ -276,6 +281,26 @@ def save_summ_cash(message):
 def report(info):
     with open('report.txt', encoding='utf8') as f:
         template = f.read()
+
+        '''
+        +ФИО: 1 2 3
+        +Возраст: 56
+        +Регион: Тверская область
+        +Прожиточный минимум: 14796
+        +Семейный статус: Замужем / женат
+        +Дети до 18: один ребенок
+        +Дети от 18 до 23: двое детей
+        +Количество членов семьи: 5
+        +Наличие инвалидности: нет ни у кого
+        +Состоит ли на учете у психиатра: нет, не стою на учете
+        +---Официальный доход: 1
+        +---Официальный доход супруга/ги: 0
+        ---Доход детей от 18 до 23: [1, 1]
+        +Суммарный доход: 50000
+        ---Есть ли иммущество: [0, 3, 2]
+        ---На что необходимы средства: ('Другое', 1)
+        '''
+
     doc = template.format(
         name=info['name'],
         age=info['age'],
@@ -284,7 +309,17 @@ def report(info):
         family_info=info['family_info'],
         children_0_18=info['family_agge_info'],
         children_18_23=info['family_agge2_info'],
+        summ_family=info['family_count'],
+        disabled_person=info['get_family_invalid_info'],
+        psycho=info['get_user_ps_info'],
+        official_income=info['get_user_work_info_title'],
+        spouses_official_income=info['get_family_work_info_title'],
+        children_18_23_income='\n'.join(['\t{}. {}'.format(idx, title) for idx, title in enumerate(info['family1_work_info_titles'], 1)]),
+        summ_cash_family=info['summ_cash'],
+        property=info['possession_info'],
+        for_what=info['why_money'],
     )
+    print(info)
     return doc
 
 
@@ -446,6 +481,7 @@ def save_age(message):
     get_location(message)
 
 
+@bot.message_handler(commands=['begin'])
 def get_name(message):
     bot.send_message(message.chat.id, m.get_name)
     bot.register_next_step_handler(message, save_name)
@@ -463,12 +499,18 @@ def start_message(message):
         result(message)
     client = message.chat.first_name
     bot.send_message(message.chat.id, m.start.format(client))
-    get_name(message)
+    bot.send_message(message.chat.id, 'Для начала заполнения анкеты введите /begin')
 
 
 @bot.message_handler(commands=['id'])
 def get_chat_id(message):
     bot.send_message(message.chat.id, message.chat.id)
+
+
+@bot.message_handler(commands=['test'])
+def test_send_message(message):
+    for chat_id in result_address_list:
+        bot.send_message(chat_id, 'Тест')
 
 
 bot.infinity_polling()
