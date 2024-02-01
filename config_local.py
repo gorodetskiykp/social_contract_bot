@@ -1,3 +1,3 @@
 TOKEN = ''
 
-result_address_list = []
+result_address_list = []  # обязательно список!
