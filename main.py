@@ -57,6 +57,7 @@ def family_info_button_pressed(call):
     get_family_agge_info(call.message)
 
 
+@bot.message_handler(commands=['start'])
 def get_family_info(message):
     """Опрашивает состав семьи."""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -73,20 +74,19 @@ def get_family_info(message):
 @bot.callback_query_handler(
     func=lambda call: 'family_agge_info_button_pressed' in call.data)
 def family_agge_info_button_pressed(call):
-    _, info = call.data.split(':')
-    info_title = b.family_agge_info[int(info)]
-    user_info[call.message.chat.id]['family_agge_info'] = info_title
+    _, number = call.data.split(':')
+    user_info[call.message.chat.id]['family_agge_info'] = int(number)
     get_family_agge2_info(call.message)
 
 
 def get_family_agge_info(message):
     """узнает сколько детей младше 18"""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b.family_agge_info):
+    for info, number in b.family_agge_info:
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
-                callback_data='family_agge_info_button_pressed:{}'.format(idx),
+                callback_data='family_agge_info_button_pressed:{}'.format(number),
             )
         )
     bot.send_message(message.chat.id, m.family_agge_info, reply_markup=keyboard)
@@ -111,10 +111,9 @@ def save_family_count(message):
 def family_agge2_info_button_pressed(call):
     user_info[call.message.chat.id]['family1_work_info'] = []
     user_info[call.message.chat.id]['family1_work_info_titles'] = []
-    _, info = call.data.split(':')
-    children_count = int(info)
-    info_title = b.family_agge2_info[children_count]
-    user_info[call.message.chat.id]['family_agge2_info'] = info_title
+    _, number = call.data.split(':')
+    children_count = int(number)
+    user_info[call.message.chat.id]['family_agge2_info'] = children_count
     if children_count:
         user_info[call.message.chat.id]['current_child_no_18_23'] = 1
         user_info[call.message.chat.id]['children_18_23_count'] = children_count
@@ -127,11 +126,11 @@ def family_agge2_info_button_pressed(call):
 def get_family_agge2_info(message):
     """узнает сколько детей старше 18 и моложе 23"""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b.family_agge2_info):
+    for info, number in b.family_agge2_info:
         keyboard.add(
             types.InlineKeyboardButton(
                 text=info,
-                callback_data='family_agge2_info_button_pressed:{}'.format(idx),
+                callback_data='family_agge2_info_button_pressed:{}'.format(number),
             )
         )
     bot.send_message(message.chat.id, m.family_agge2_info, reply_markup=keyboard)
@@ -141,18 +140,23 @@ def get_family_agge2_info(message):
     func=lambda call: 'get_family_invalid_info_button_pressed' in call.data)
 def get_family_invalid_info_button_pressed(call):
     _, info = call.data.split(':')
-    info_title = b.get_family_invalid_info[int(info)]
+    info_title, invalid_status, *_  = b.get_family_invalid_info[int(info)]
     user_info[call.message.chat.id]['get_family_invalid_info'] = info_title
+    user_info[call.message.chat.id]['invalid_status'] = invalid_status
     get_user_ps_info(call.message)
 
 
 def get_family_invalid_info(message):
     """узнает есть ли инвалидность"""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, info in enumerate(b.get_family_invalid_info):
+    for idx, (text, _, has_partner, has_children) in enumerate(b.get_family_invalid_info):
+        if has_partner and user_info[message.chat.id]['family_info_number'] == 0:
+            continue
+        if has_children and (user_info[message.chat.id]['family_agge_info'] + user_info[message.chat.id]['family_agge2_info']) == 0:
+            continue
         keyboard.add(
             types.InlineKeyboardButton(
-                text=info,
+                text=text,
                 callback_data='get_family_invalid_info_button_pressed:{}'.format(idx),
             )
         )
@@ -217,16 +221,19 @@ def get_family_work_info_button_pressed(call):
 def get_family_work_info(message):
     """есть работа у супруга или нет"""
     if user_info[message.chat.id]['family_info_number'] == 0:
+        user_info[message.chat.id]['get_family_work_info'] = ''
+        user_info[message.chat.id]['get_family_work_info_title'] = ''
         get_summ_cash(message)
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    for idx, (info, _) in enumerate(b.get_family_work_info):
-        keyboard.add(
-            types.InlineKeyboardButton(
-                text=info,
-                callback_data='get_family_work_info_button_pressed:{}'.format(idx),
+    else:
+        keyboard = types.InlineKeyboardMarkup(row_width=1)
+        for idx, (info, _) in enumerate(b.get_family_work_info):
+            keyboard.add(
+                types.InlineKeyboardButton(
+                    text=info,
+                    callback_data='get_family_work_info_button_pressed:{}'.format(idx),
+                )
             )
-        )
-    bot.send_message(message.chat.id, m.get_family_work_info, reply_markup=keyboard)
+        bot.send_message(message.chat.id, m.get_family_work_info, reply_markup=keyboard)
 
 
 @bot.callback_query_handler(
@@ -259,7 +266,7 @@ def get_family1_work_info(message):
                 callback_data='get_family1_work_info_button_pressed:{}'.format(idx),
             )
         )
-    family1_work_info = {'{}. {}'.format(child_no, m.get_family1_work_info)}
+    family1_work_info = '{}. {}'.format(child_no, m.get_family1_work_info)
     bot.send_message(message.chat.id, family1_work_info, reply_markup=keyboard)
 
 
@@ -316,7 +323,7 @@ def report(info):
         spouses_official_income=info['get_family_work_info_title'],
         children_18_23_income='\n'.join(['\t{}. {}'.format(idx, title) for idx, title in enumerate(info['family1_work_info_titles'], 1)]),
         summ_cash_family=info['summ_cash'],
-        property=info['possession_info'],
+        property=', '.join(info['possession_info_titles']),
         for_what=info['why_money'],
     )
     print(info)
@@ -364,14 +371,13 @@ def result(message):
     ])
     print(f'{case2=}')
     # 3: ни у кого нет инвалидности
-    case3 = user_info[message.chat.id]['get_family_invalid_info'] == 'нет ни у кого'
+    case3 = user_info[message.chat.id]['invalid_status'] == 0
     print(f'{case3=}')
     # 4: у заявителя нет психических проблем
     case4 = user_info[message.chat.id]['get_user_ps_info'] == 'нет, не стою на учете'
     print(f'{case4=}')
     # 5: проверка имущества
-    possessions = [b.possession_info[choice][1] for choice in user_info[message.chat.id]['possession_info']]
-    case5 = not any(possessions)
+    case5 = not user_info[message.chat.id]['possession_info']
     print(f'{case5=}')
     # 6: для чего нужны средства
     case6 = user_info[message.chat.id]['why_money'][1] == 0
@@ -423,11 +429,15 @@ def why_money(message):
     func=lambda call: 'possession_info_button_pressed' in call.data)
 def possession_info_button_pressed(call):
     _, info = call.data.split(':')
+    possession_info = user_info[call.message.chat.id].get('possession_info')
     if info == 'end':
         why_money(call.message)
+        user_info[call.message.chat.id]['possession_info_titles'] = []
+        if possession_info:
+            for idx in possession_info:
+                user_info[call.message.chat.id]['possession_info_titles'].append(b.possession_info[idx][0])
     else:
         choice = int(info)
-        possession_info = user_info[call.message.chat.id].get('possession_info')
         if not possession_info:
             possession_info = []
         if choice in possession_info:
@@ -492,9 +502,9 @@ def save_name(message):
     get_age(message)
 
 
-@bot.message_handler(commands=['start'])
+# @bot.message_handler(commands=['start'])
 def start_message(message):
-    if user_info[message.chat.id] and 'why_money' in user_info[call.message.chat.id]:
+    if user_info[message.chat.id] and 'why_money' in user_info[message.chat.id]:
         bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
         result(message)
     client = message.chat.first_name
