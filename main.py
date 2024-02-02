@@ -57,7 +57,7 @@ def family_info_button_pressed(call):
     get_family_agge_info(call.message)
 
 
-@bot.message_handler(commands=['start'])
+# @bot.message_handler(commands=['start'])
 def get_family_info(message):
     """Опрашивает состав семьи."""
     keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -502,7 +502,7 @@ def save_name(message):
     get_age(message)
 
 
-# @bot.message_handler(commands=['start'])
+@bot.message_handler(commands=['start'])
 def start_message(message):
     if user_info[message.chat.id] and 'why_money' in user_info[message.chat.id]:
         bot.send_message(message.chat.id, 'Анкету можно заполнять только один раз.')
