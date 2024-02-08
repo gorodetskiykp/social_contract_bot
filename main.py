@@ -324,7 +324,7 @@ def report(info):
         children_18_23_income='\n'.join(['\t{}. {}'.format(idx, title) for idx, title in enumerate(info['family1_work_info_titles'], 1)]),
         summ_cash_family=info['summ_cash'],
         property=', '.join(info['possession_info_titles']),
-        for_what=info['why_money'],
+        for_what=info['why_money'][0],
     )
     print(info)
     return doc
@@ -332,32 +332,6 @@ def report(info):
 
 # @bot.message_handler(commands=['start'])
 def result(message):
-    # user_info[message.chat.id] = {
-    #     'name': 'Иванов Иван',
-    #     'age': 40,
-    #     'region': 'Курганская область',
-    #     'min_money': 20_000,
-    #     'family_info': 'Замужем / женат',
-    #     'family_agge_info': 'двое детей',
-    #     'family_agge2_info': 'трое детей',
-    #     'summ_cash': 100_000,
-    #     'family_count': 6,
-    #     'get_user_work_info': 1,
-    #     'get_family_work_info': 1,
-    #     'family1_work_info': [1, 1, 1],
-    #     'get_family_invalid_info': 'нет ни у кого',
-    #     'get_user_ps_info': 'нет, не стою на учете',
-    #     'possession_info': [0, 2, 4],
-    #     'why_money': 1,
-    # }
-    # Состав данных user_info[message.chat.id]
-    # - min_money - прожиточный минимум в регионе
-    #
-    # - get_user_work_info - есть ли у заявителя работа = 0 / 1
-    # - get_family_work_info - есть ли у супруга работа = 0 / 1
-    # - family1_work_info - есть ли работа у детей 18-23 = [1, 0, ...]
-    # - summ_cash - доход семьи, включая дополнительный
-
     # 1: суммарный доход семьи меньше прожиточного минимума
     case1 = ((user_info[message.chat.id]['summ_cash']
               / user_info[message.chat.id]['family_count'])
@@ -431,11 +405,14 @@ def possession_info_button_pressed(call):
     _, info = call.data.split(':')
     possession_info = user_info[call.message.chat.id].get('possession_info')
     if info == 'end':
-        why_money(call.message)
         user_info[call.message.chat.id]['possession_info_titles'] = []
         if possession_info:
             for idx in possession_info:
                 user_info[call.message.chat.id]['possession_info_titles'].append(b.possession_info[idx][0])
+        else:
+            user_info[call.message.chat.id]['possession_info'] = []
+            user_info[call.message.chat.id]['possession_info_titles'] = []
+        why_money(call.message)
     else:
         choice = int(info)
         if not possession_info:
